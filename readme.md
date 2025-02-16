@@ -6,10 +6,6 @@
 
 A visually stunning and feature-rich Todo List application designed to boost your productivity with style! ✨
 
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/.../screenshot.png" width="45%" alt="Live">
-
-</div>
 
 ## 🌟 Features That Spark Joy
 
@@ -32,3 +28,21 @@ A visually stunning and feature-rich Todo List application designed to boost you
 ![SQLite](https://img.shields.io/badge/SQLite-Database-%23003B57?style=flat-square&logo=sqlite&logoColor=white)
 
 ## 🚀 Quick Start
+
+## ☁️ Render Deployment
+
+1. **Create New Web Service** on Render
+2. Connect your GitHub repository
+3. Set environment variables:
+   ```text
+   SECRET_KEY = your-secret-key-here
+   ```
+4. Keep default build command: `pip install -r requirements.txt`
+5. Start command: `gunicorn app:app`
+
+✨ **Live Demo**: [https://todo-app-using-flask.onrender.com](https://todo-app-using-flask.onrender.com) 🚀
+
+---
+
+> **Note**  
+> The demo link might take 20-30 seconds to wake up on Render's free tier
