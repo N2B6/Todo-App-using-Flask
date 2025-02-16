@@ -9,9 +9,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.urandom(24)
 db = SQLAlchemy(app)
 
-with app.app_context():
-    db.create_all()
-
 class Todo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -20,6 +17,10 @@ class Todo(db.Model):
     priority = db.Column(db.Integer, default=2)
     date_created = db.Column(db.DateTime, default=datetime.utcnow)
     date_completed = db.Column(db.DateTime)
+
+# Create database tables within application context
+with app.app_context():
+    db.create_all()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
