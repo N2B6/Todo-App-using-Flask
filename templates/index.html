@@ -1,0 +1,708 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Todo App{% endblock %}
+
+{% block styles %}
+{{ super() }}  <!-- This ensures base.html styles are included first -->
+<style>
+    /* Vibrant background animation */
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    html body {
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+        min-height: 100vh;
+        color: #fff;
+    }
+
+    /* Card styling */
+    .card {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(10px);
+        border: none !important;
+        border-radius: 20px !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Task item hover effect */
+    .task-item {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .task-item:hover {
+        transform: scale(1.02);
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    /* Button styling */
+    .btn {
+        border-radius: 25px;
+        padding: 8px 20px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success {
+        background: linear-gradient(45deg, #23d5ab, #23a6d5);
+        border: none;
+    }
+
+    .btn-danger {
+        background: linear-gradient(45deg, #e73c7e, #ee7752);
+        border: none;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Form styling */
+    .form-control {
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 0 0.2rem rgba(35, 181, 211, 0.25);
+    }
+
+    /* Priority badges */
+    .badge {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .bg-danger {
+        background: linear-gradient(45deg, #e73c7e, #ee7752);
+    }
+
+    .bg-warning {
+        background: linear-gradient(45deg, #ff9a44, #ff6f61);
+    }
+
+    .bg-success {
+        background: linear-gradient(45deg, #23d5ab, #23a6d5);
+    }
+
+    /* Animated progress circle */
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        position: relative;
+        margin: 20px auto;
+    }
+
+    .progress-circle svg {
+        transform: rotate(-90deg);
+    }
+
+    .progress-circle circle {
+        fill: none;
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease;
+    }
+
+    /* Modified floating animation */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0px); }
+    }
+
+    .floating {
+        animation: float 3s ease-in-out infinite;
+        margin: 10px 0;
+    }
+
+    /* Mobile-specific table styles */
+    @media (max-width: 768px) {
+        .table {
+            width: 100% !important;
+            min-width: auto; /* Remove fixed minimum width */
+        }
+        
+        .table-responsive {
+            overflow-x: visible; /* Disable horizontal scrolling */
+            -webkit-overflow-scrolling: auto;
+            margin-left: 0;
+            margin-right: 0;
+            max-height: 50vh; /* Add vertical scroll container */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        
+        .table td, .table th {
+            white-space: nowrap;
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .task-item {
+            font-size: 0.9rem;
+        }
+    }
+
+    .table-responsive {
+        max-height: 60vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    @media (max-width: 768px) {
+        .table-responsive {
+            max-height: 50vh;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 flex-grow-1">
+    <div style="max-width: 100%; overflow-x: hidden;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            <!-- Your existing content -->
+        {% endwith %}
+        
+        <div class="homepage-content">
+            <!-- Page-specific content -->
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card shadow floating">
+                        <div class="card-header bg-transparent text-white position-relative">
+                            <h3 class="mb-0 position-relative">
+                                <i class="bi bi-list-check me-2" style="color: #23a6d5;"></i>
+                                <span style="background: linear-gradient(45deg, #23a6d5, #23d5ab); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                                    Todo List
+                                </span>
+                                <span class="badge float-end mt-1" style="background: linear-gradient(45deg, #e73c7e, #ee7752);">
+                                    {{ active_todos|length }} Active Tasks
+                                </span>
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <form action="/" method="POST" class="mb-4 task-card p-4 hover-scale">
+                                <div class="row g-3">
+                                    <div class="col-md-6 form-floating">
+                                        <input type="text" name="title" 
+                                               class="form-control" 
+                                               placeholder="Task title"
+                                               id="titleInput"
+                                               required>
+                                        <label for="titleInput" class="ms-2">Task Title</label>
+                                    </div>
+                                    <div class="col-md-3 form-floating">
+                                        <select name="priority" class="form-select" id="prioritySelect">
+                                            <option value="3">High</option>
+                                            <option value="2" selected>Medium</option>
+                                            <option value="1">Low</option>
+                                        </select>
+                                        <label for="prioritySelect" class="ms-2">Priority</label>
+                                    </div>
+                                    <div class="col-12">
+                                        <textarea name="description" 
+                                                  class="form-control" 
+                                                  rows="2"
+                                                  placeholder="Task description"
+                                                  maxlength="100"
+                                                  id="descriptionInput"></textarea>
+                                        <div id="charCounter" class="text-muted text-end small mt-1"></div>
+                                    </div>
+                                    <div class="col-12 text-end">
+                                        <button type="submit" class="btn btn-success px-4">
+                                            Add Task
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <ul class="nav nav-tabs mb-4" id="priorityTabs">
+                                <li class="nav-item">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#all">All Tasks</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#high">🔥 High</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#medium">⚡ Medium</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#low">🌱 Low</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#done">✅ Done</a>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content mt-3">
+                                <!-- All Tasks Tab -->
+                                <div class="tab-pane fade show active" id="all">
+                                    <div class="table-responsive" style="
+                                        max-height: 55vh;
+                                        overflow-y: auto;
+                                        -webkit-overflow-scrolling: touch;
+                                        position: relative;
+                                        overflow-x: hidden;
+                                        width: 100%;
+                                    ">
+                                        <table class="table table-borderless" style="
+                                            min-width: 100%;
+                                            table-layout: fixed;
+                                        ">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <th>Title</th>
+                                                    <th>Description</th>
+                                                    <th>Priority</th>
+                                                    <th>Date Created</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for todo in active_todos %}
+                                                <tr class="task-item priority-{% if todo.priority == 1 %}low{% elif todo.priority == 3 %}high{% else %}medium{% endif %}">
+                                                    <td class="align-middle">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   class="form-check-input" 
+                                                                   data-id="{{ todo.id }}">
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ todo.title }}</td>
+                                                    <td>{{ todo.description or '' }}</td>
+                                                    <td>
+                                                        {% if todo.priority == 3 %}
+                                                        <span class="badge bg-danger">High</span>
+                                                        {% elif todo.priority == 2 %}
+                                                        <span class="badge bg-warning">Medium</span>
+                                                        {% else %}
+                                                        <span class="badge bg-success">Low</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ todo.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                    <td>
+                                                        <a href="#" 
+                                                           class="btn btn-danger btn-sm" 
+                                                           onclick="deleteTask({{ todo.id }})">
+                                                            ×
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        No active tasks. Add one above!
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- High Priority Tab -->
+                                <div class="tab-pane fade" id="high">
+                                    <div class="table-responsive" style="
+                                        max-height: 55vh;
+                                        overflow-y: auto;
+                                        -webkit-overflow-scrolling: touch;
+                                        position: relative;
+                                        overflow-x: hidden;
+                                        width: 100%;
+                                    ">
+                                        <table class="table table-borderless" style="
+                                            min-width: 100%;
+                                            table-layout: fixed;
+                                        ">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <th>Title</th>
+                                                    <th>Description</th>
+                                                    <th>Priority</th>
+                                                    <th>Date Created</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for todo in active_todos if todo.priority == 3 %}
+                                                <tr class="task-item priority-high">
+                                                    <td class="align-middle">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   class="form-check-input" 
+                                                                   data-id="{{ todo.id }}">
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ todo.title }}</td>
+                                                    <td>{{ todo.description or '' }}</td>
+                                                    <td>
+                                                        <span class="badge bg-danger">High</span>
+                                                    </td>
+                                                    <td>{{ todo.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                    <td>
+                                                        <a href="#" 
+                                                           class="btn btn-danger btn-sm" 
+                                                           onclick="deleteTask({{ todo.id }})">
+                                                            ×
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">No high priority tasks</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Medium Priority Tab -->
+                                <div class="tab-pane fade" id="medium">
+                                    <div class="table-responsive" style="
+                                        max-height: 55vh;
+                                        overflow-y: auto;
+                                        -webkit-overflow-scrolling: touch;
+                                        position: relative;
+                                        overflow-x: hidden;
+                                        width: 100%;
+                                    ">
+                                        <table class="table table-borderless" style="
+                                            min-width: 100%;
+                                            table-layout: fixed;
+                                        ">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <th>Title</th>
+                                                    <th>Description</th>
+                                                    <th>Priority</th>
+                                                    <th>Date Created</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for todo in active_todos if todo.priority == 2 %}
+                                                <tr class="task-item priority-medium">
+                                                    <td class="align-middle">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   class="form-check-input" 
+                                                                   data-id="{{ todo.id }}">
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ todo.title }}</td>
+                                                    <td>{{ todo.description or '' }}</td>
+                                                    <td>
+                                                        <span class="badge bg-warning">Medium</span>
+                                                    </td>
+                                                    <td>{{ todo.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                    <td>
+                                                        <a href="#" 
+                                                           class="btn btn-danger btn-sm" 
+                                                           onclick="deleteTask({{ todo.id }})">
+                                                            ×
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">No medium priority tasks</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Low Priority Tab -->
+                                <div class="tab-pane fade" id="low">
+                                    <div class="table-responsive" style="
+                                        max-height: 55vh;
+                                        overflow-y: auto;
+                                        -webkit-overflow-scrolling: touch;
+                                        position: relative;
+                                        overflow-x: hidden;
+                                        width: 100%;
+                                    ">
+                                        <table class="table table-borderless" style="
+                                            min-width: 100%;
+                                            table-layout: fixed;
+                                        ">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <th>Title</th>
+                                                    <th>Description</th>
+                                                    <th>Priority</th>
+                                                    <th>Date Created</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for todo in active_todos if todo.priority == 1 %}
+                                                <tr class="task-item priority-low">
+                                                    <td class="align-middle">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   class="form-check-input" 
+                                                                   data-id="{{ todo.id }}">
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ todo.title }}</td>
+                                                    <td>{{ todo.description or '' }}</td>
+                                                    <td>
+                                                        <span class="badge bg-success">Low</span>
+                                                    </td>
+                                                    <td>{{ todo.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                    <td>
+                                                        <a href="#" 
+                                                           class="btn btn-danger btn-sm" 
+                                                           onclick="deleteTask({{ todo.id }})">
+                                                            ×
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">No low priority tasks</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Done Tab -->
+                                <div class="tab-pane fade" id="done">
+                                    <div class="d-flex justify-content-end mb-3">
+                                        <button class="btn btn-danger btn-sm" 
+                                                id="deleteAllCompleted"
+                                                {% if not completed_todos %}disabled{% endif %}>
+                                            <i class="bi bi-trash3"></i> Delete All Completed
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive" style="
+                                        max-height: 55vh;
+                                        overflow-y: auto;
+                                        -webkit-overflow-scrolling: touch;
+                                        position: relative;
+                                        overflow-x: hidden;
+                                        width: 100%;
+                                    ">
+                                        <table class="table table-borderless" style="
+                                            min-width: 100%;
+                                            table-layout: fixed;
+                                        ">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <th>Title</th>
+                                                    <th>Priority</th>
+                                                    <th>Date Completed</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for todo in completed_todos %}
+                                                <tr class="completed-task">
+                                                    <td class="align-middle">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   class="form-check-input" 
+                                                                   data-id="{{ todo.id }}"
+                                                                   checked>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div>
+                                                                <div class="fw-medium">{{ todo.title }}</div>
+                                                                <small class="text-muted">{{ todo.description or '' }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">Completed</span>
+                                                        <small class="text-muted d-block mt-1">
+                                                            {% if todo.priority == 3 %}
+                                                            High
+                                                            {% elif todo.priority == 2 %}
+                                                            Medium
+                                                            {% else %}
+                                                            Low
+                                                            {% endif %}
+                                                        </small>
+                                                    </td>
+                                                    <td class="text-muted">
+                                                        {{ todo.date_completed.strftime('%Y-%m-%d %H:%M') if todo.date_completed else '' }}
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <a href="#" 
+                                                           class="btn btn-danger btn-sm" 
+                                                           onclick="deleteTask({{ todo.id }})">
+                                                            ×
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        No completed tasks yet
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}  <!-- This includes base.html scripts first -->
+<script>
+    // Character counter for description
+    const descriptionInput = document.getElementById('descriptionInput');
+    const charCounter = document.getElementById('charCounter');
+
+    function updateCharCounter() {
+        const currentLength = descriptionInput.value.length;
+        const remaining = 100 - currentLength;
+        charCounter.textContent = `${currentLength}/100 characters (${remaining} remaining)`;
+        
+        if (remaining < 20) {
+            charCounter.style.color = '#dc3545';
+        } else {
+            charCounter.style.color = '#6c757d';
+        }
+    }
+
+    // Initial update
+    updateCharCounter();
+    descriptionInput.addEventListener('input', updateCharCounter);
+
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const todoId = this.dataset.id;
+            const completed = this.checked;
+            
+            fetch(`/update/${todoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ completed: completed })
+            })
+            .then(response => {
+                if(response.ok) {
+                    // Force full page reload with cache busting
+                    window.location.reload(true);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Update failed');
+            });
+        });
+    });
+
+    document.querySelectorAll('.priority-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const todoId = this.dataset.id;
+            const priority = this.value;
+            
+            fetch(`/update/${todoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ priority: priority })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    const activeTab = sessionStorage.getItem('activeTab') || '#all';
+                    window.location.href = window.location.pathname + activeTab;
+                }
+            });
+        });
+    });
+
+    // Store active tab on change
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', event => {
+            sessionStorage.setItem('activeTab', event.target.getAttribute('href'));
+        });
+    });
+
+    // Restore active tab on load
+    window.addEventListener('DOMContentLoaded', () => {
+        const activeTab = sessionStorage.getItem('activeTab');
+        if (activeTab) {
+            const triggerEl = document.querySelector(`[href="${activeTab}"]`);
+            if(triggerEl) new bootstrap.Tab(triggerEl).show();
+        }
+    });
+
+    function deleteTask(todoId) {
+        if(confirm('Are you sure you want to delete this task?')) {
+            fetch(`/delete/${todoId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if(response.ok) {
+                    window.location.reload(); // Force page reload
+                } else {
+                    alert('Delete failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Network error');
+            });
+        }
+    }
+
+    document.getElementById('deleteAllCompleted').addEventListener('click', function() {
+        if(confirm('Are you sure you want to delete all completed tasks?')) {
+            fetch('/delete-completed', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if(response.ok) {
+                    // Force a full page reload to refresh all content
+                    window.location.reload(true);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

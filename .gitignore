@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.python-version
+.pytest_cache/
+venv/
+env/
+ENV/
+
+# Database
+*.db
+*.sqlite
+todos.db  # Your specific SQLite file
+instance/
+# Environment files
+.env
+.flaskenv
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build/compilation
+build/
+dist/
+*.so
+
+# Logs and local settings
+*.log
+logs/
+settings.py
+
+# Temp files
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+
+# Package manager files
+Pipfile
+Pipfile.lock
+poetry.lock
+requirements/*.txt
+
+# Render specific
+.render/
+
+# Development misc
+__pypackages__/ 
