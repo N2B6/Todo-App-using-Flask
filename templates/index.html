@@ -44,6 +44,7 @@
     .task-item:hover {
         transform: scale(1.02);
         background: rgba(255, 255, 255, 0.95) !important;
+        z-index: 1; /* Add z-index to keep hovered item above others */
     }
 
     /* Button styling */
@@ -159,15 +160,65 @@
     }
 
     .table-responsive {
-        max-height: 60vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow: visible !important; /* Allow overflow for hover effects */
+        position: relative; /* Create stacking context */
     }
     
     @media (max-width: 768px) {
         .table-responsive {
             max-height: 50vh;
         }
+    }
+
+    /* Update table styles */
+    .table {
+        min-width: 100% !important;
+        table-layout: fixed;
+        position: relative; /* Needed for z-index to work */
+    }
+
+    /* Add transition to checkbox */
+    .form-check-input {
+        transition: transform 0.2s ease;
+    }
+
+    .task-item:hover .form-check-input {
+        transform: scale(1.2);
+    }
+
+    /* Add overflow constraints */
+    .table-responsive {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    /* Ensure table cells don't overflow */
+    .table td, .table th {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Checkbox positioning adjustment */
+    .form-check {
+        padding-left: 2.5rem; /* Add left padding to move checkbox right */
+    }
+
+    .form-check-input {
+        transition: transform 0.2s ease;
+        margin-left: -0.5rem; /* Compensate for padding */
+    }
+
+    /* Compact guest alert */
+    .alert.guest-alert {
+        backdrop-filter: blur(5px);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .alert.guest-alert a {
+        color: #23d5ab !important;
+        text-decoration: underline;
     }
 </style>
 {% endblock %}
@@ -196,7 +247,16 @@
                             </h3>
                         </div>
                         <div class="card-body">
-                            <form action="/" method="POST" class="mb-4 task-card p-4 hover-scale">
+                            {% if not session.user_id %}
+                            <div class="alert guest-alert small py-2 mb-3 d-flex align-items-center">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <div>
+                                    Guest tasks: Deleted after 30 days • 
+                                    <a href="{{ url_for('login') }}" class="alert-link">Login with Google</a> to save permanently
+                                </div>
+                            </div>
+                            {% endif %}
+                            <form action="{{ url_for('add_task') }}" method="POST" class="mb-4 task-card p-4 hover-scale">
                                 <div class="row g-3">
                                     <div class="col-md-6 form-floating">
                                         <input type="text" name="title" 
@@ -499,22 +559,13 @@
                                             <i class="bi bi-trash3"></i> Delete All Completed
                                         </button>
                                     </div>
-                                    <div class="table-responsive" style="
-                                        max-height: 55vh;
-                                        overflow-y: auto;
-                                        -webkit-overflow-scrolling: touch;
-                                        position: relative;
-                                        overflow-x: hidden;
-                                        width: 100%;
-                                    ">
-                                        <table class="table table-borderless" style="
-                                            min-width: 100%;
-                                            table-layout: fixed;
-                                        ">
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless">
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>Status</th>
                                                     <th>Title</th>
+                                                    <th>Description</th>
                                                     <th>Priority</th>
                                                     <th>Date Completed</th>
                                                     <th>Actions</th>
@@ -531,30 +582,23 @@
                                                                    checked>
                                                         </div>
                                                     </td>
+                                                    <td>{{ todo.title }}</td>
+                                                    <td>{{ todo.description or '' }}</td>
                                                     <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <div>
-                                                                <div class="fw-medium">{{ todo.title }}</div>
-                                                                <small class="text-muted">{{ todo.description or '' }}</small>
-                                                            </div>
-                                                        </div>
+                                                        {% if todo.priority == 3 %}
+                                                        <span class="badge bg-danger">High</span>
+                                                        {% elif todo.priority == 2 %}
+                                                        <span class="badge bg-warning">Medium</span>
+                                                        {% else %}
+                                                        <span class="badge bg-success">Low</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-secondary">Completed</span>
-                                                        <small class="text-muted d-block mt-1">
-                                                            {% if todo.priority == 3 %}
-                                                            High
-                                                            {% elif todo.priority == 2 %}
-                                                            Medium
-                                                            {% else %}
-                                                            Low
-                                                            {% endif %}
-                                                        </small>
+                                                        {% if todo.date_completed %}
+                                                        {{ todo.date_completed.strftime('%Y-%m-%d %H:%M') }}
+                                                        {% endif %}
                                                     </td>
-                                                    <td class="text-muted">
-                                                        {{ todo.date_completed.strftime('%Y-%m-%d %H:%M') if todo.date_completed else '' }}
-                                                    </td>
-                                                    <td class="text-end">
+                                                    <td>
                                                         <a href="#" 
                                                            class="btn btn-danger btn-sm" 
                                                            onclick="deleteTask({{ todo.id }})">

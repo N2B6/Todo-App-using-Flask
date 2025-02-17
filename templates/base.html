@@ -166,12 +166,14 @@
                 <ul class="navbar-nav ms-auto">
                     {% if session.user_id %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>{{ session.user_name }}
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="{{ session.user_picture }}" 
+                                 class="rounded-circle border border-2 border-white" 
+                                 style="width: 32px; height: 32px; object-fit: cover;"
+                                 alt="Profile picture">
+                            <span class="d-none d-md-inline">{{ session.user_name }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1001;">
-                            <!-- <li><a class="dropdown-item" href="#">Profile</a></li>
-                            <li><hr class="dropdown-divider"></li> -->
                             <li><a class="dropdown-item text-danger" href="/logout">Logout</a></li>
                         </ul>
                     </li>

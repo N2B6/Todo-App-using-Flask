@@ -1,10 +1,12 @@
 from flask import Flask, session, render_template, request, redirect, jsonify, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 from authlib.integrations.flask_client import OAuth
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+import uuid
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'todos.db')
@@ -37,8 +39,12 @@ class Todo(db.Model):
     description = db.Column(db.Text(100))
     completed = db.Column(db.Boolean, default=False)
     priority = db.Column(db.Integer, default=2)
-    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    date_created = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     date_completed = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user = db.relationship('User', backref='todos')
+    session_id = db.Column(db.String(36), nullable=False)
+    is_temporary = db.Column(db.Boolean, default=True, nullable=False)
 
 # Add User model
 class User(db.Model):
@@ -46,15 +52,50 @@ class User(db.Model):
     google_id = db.Column(db.String(100), unique=True)
     email = db.Column(db.String(100), unique=True)
     name = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
 # Create database tables within application context
 with app.app_context():
     db.create_all()
 
+# Initialize scheduler
+scheduler = BackgroundScheduler(daemon=True)
+scheduler.add_jobstore('sqlalchemy', url=app.config['SQLALCHEMY_DATABASE_URI'])
+
+def delete_old_temp_tasks():
+    with app.app_context():
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+            deleted_count = Todo.query.filter(
+                Todo.is_temporary == True,
+                Todo.date_created < cutoff
+            ).delete()
+            db.session.commit()
+            app.logger.info(f"Cleaned up {deleted_count} temporary tasks")
+        except Exception as e:
+            app.logger.error(f"Cleanup error: {str(e)}")
+            db.session.rollback()
+
+# Schedule cleanup to run daily at 3 AM
+scheduler.add_job(
+    delete_old_temp_tasks,
+    'cron',
+    hour=3,
+    minute=0,
+    timezone='UTC'
+)
+
+# Start scheduler when app starts
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    scheduler.start()
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
+        if 'user_id' not in session:
+            flash('Please login with Google to create tasks', 'warning')
+            return redirect(url_for('login'))
+            
         todo_title = request.form.get('title')
         todo_description = request.form.get('description', '')
         todo_priority = request.form.get('priority', 2, type=int)
@@ -68,13 +109,14 @@ def home():
             flash('Description cannot exceed 300 characters', 'danger')
             return redirect(url_for('home'))
 
-        # Create new task
+        # Create new task with user association
         new_todo = Todo(
             title=todo_title,
             description=todo_description,
             priority=todo_priority,
             completed=False,
-            date_created=datetime.utcnow()
+            date_created=datetime.now(timezone.utc),
+            user_id=session['user_id']
         )
 
         try:
@@ -87,9 +129,35 @@ def home():
 
         return redirect(url_for('home'))
 
-    # GET request handling remains same
-    active_todos = Todo.query.filter_by(completed=False).order_by(Todo.date_created.desc()).all()
-    completed_todos = Todo.query.filter_by(completed=True).order_by(Todo.date_completed.desc()).all()
+    # GET request - show todos for current session
+    active_todos = []
+    completed_todos = []
+    
+    if 'user_id' in session:
+        # Logged-in user - show all their tasks
+        active_todos = Todo.query.filter_by(
+            completed=False, 
+            user_id=session['user_id']
+        ).order_by(Todo.date_created.desc()).all()
+        
+        completed_todos = Todo.query.filter_by(
+            completed=True, 
+            user_id=session['user_id']
+        ).order_by(Todo.date_completed.desc()).all()
+    else:
+        # Guest user - show temporary session tasks
+        session_id = session.get('temp_user')
+        if session_id:
+            active_todos = Todo.query.filter_by(
+                completed=False, 
+                session_id=session_id
+            ).order_by(Todo.date_created.desc()).all()
+            
+            completed_todos = Todo.query.filter_by(
+                completed=True, 
+                session_id=session_id
+            ).order_by(Todo.date_completed.desc()).all()
+
     return render_template('index.html', 
                          active_todos=active_todos,
                          completed_todos=completed_todos)
@@ -97,7 +165,7 @@ def home():
 @app.route('/delete/<int:id>', methods=['DELETE'])
 def delete(id):
     try:
-        todo = Todo.query.get_or_404(id)
+        todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
         db.session.delete(todo)
         db.session.commit()
         return jsonify({'success': True}), 200
@@ -107,17 +175,17 @@ def delete(id):
 
 @app.route('/update/<int:id>', methods=['POST'])
 def update(id):
-    todo = Todo.query.get_or_404(id)
+    todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
     if 'completed' in request.json:
         todo.completed = request.json['completed']
-        todo.date_completed = datetime.utcnow() if request.json['completed'] else None
+        todo.date_completed = datetime.now(timezone.utc) if request.json['completed'] else None
     db.session.commit()
     return jsonify({'success': True})
 
 @app.route('/delete-completed', methods=['POST'])
 def delete_completed():
     try:
-        Todo.query.filter_by(completed=True).delete()
+        Todo.query.filter_by(completed=True, user_id=session['user_id']).delete()
         db.session.commit()
         flash('All completed tasks deleted successfully', 'success')
     except Exception as e:
@@ -184,6 +252,7 @@ def authorize():
         session['user_id'] = user.id
         session['user_name'] = user.name
         session['user_email'] = user.email
+        session['user_picture'] = idinfo.get('picture')
         
         flash('Logged in successfully!', 'success')
         return redirect(url_for('home'))
@@ -202,6 +271,49 @@ def logout():
     session.clear()
     flash('You have been logged out', 'success')
     return redirect(url_for('home'))
+
+@app.route('/add-task', methods=['POST'])
+def add_task():
+    if request.method == 'POST':
+        # Get form data
+        title = request.form['title']
+        description = request.form.get('description', '')
+        priority = request.form.get('priority', 2, type=int)
+
+        # Validate input
+        if not title:
+            flash('Task title is required', 'danger')
+            return redirect(url_for('home'))
+
+        # Create new Todo item
+        new_todo = Todo(
+            title=title,
+            description=description,
+            priority=priority,
+            completed=False,
+            date_created=datetime.now(timezone.utc)
+        )
+
+        # Handle user session
+        if 'user_id' in session:
+            new_todo.user_id = session['user_id']
+            new_todo.is_temporary = False
+            new_todo.session_id = str(uuid.uuid4())
+        else:
+            if 'temp_user' not in session:
+                session['temp_user'] = str(uuid.uuid4())
+            new_todo.session_id = session['temp_user']
+            new_todo.is_temporary = True
+
+        try:
+            db.session.add(new_todo)
+            db.session.commit()
+            flash('Task added successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error saving task', 'danger')
+
+        return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True)
