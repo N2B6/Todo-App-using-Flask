@@ -11,11 +11,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'todos.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))  # Use proper secret key in production
+app.secret_key = os.environ.get('SECRET_KEY')  # Use proper secret key in production
 
 # Add Google OAuth config
-app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID', '1045275910410-ja7ijodtbvacap9udnlrm3sehcanoa3g.apps.googleusercontent.com')
-app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET', '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')
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
