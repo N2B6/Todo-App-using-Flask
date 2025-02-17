@@ -108,8 +108,9 @@
         background: linear-gradient(145deg, #6c5ce7, #8a7cff);
         box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
         position: relative;
-        overflow: hidden;
-        padding: 0.25rem 0;">
+        overflow: visible;
+        padding: 0.25rem 0;
+        z-index: 1000;">
         
         <!-- Animated background elements -->
         <div class="position-absolute top-0 start-0 w-100 h-100" style="
@@ -163,20 +164,39 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
+                    {% if session.user_id %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>{{ session.user_name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1001;">
+                            <!-- <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li> -->
+                            <li><a class="dropdown-item text-danger" href="/logout">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
-                        <a class="nav-link hover-underline" href="#" style="
-                            font-size: 0.9rem;
-                            margin: 0 0.15rem;
-                            padding: 0.15rem 0.35rem;">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                        <a class="nav-link hover-underline d-flex align-items-center gap-2" 
+                           href="/login" 
+                           style="
+                                font-size: 0.9rem;
+                                margin: 0 0.15rem;
+                                padding: 0.15rem 0.35rem;
+                                color: #efefef !important;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z"/>
+                            </svg>
+                            <span>Login with Google</span>
                         </a>
                     </li>
-                    <li class="nav-item">
+                    {% endif %}
+                    <!-- <li class="nav-item">
                         <a class="nav-link hover-underline" href="#" style="
                             font-size: 0.9rem;
                             margin: 0 0.15rem;
                             padding: 0.15rem 0.35rem;">
-                            <i class="bi bi-person-plus me-1"></i>Register
+                            <i class="bi bi-person-plus me-1"></i>Register -->
                         </a>
                     </li>
                 </ul>
