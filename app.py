@@ -194,6 +194,10 @@ def update(id):
 
 @app.route('/delete-completed', methods=['POST'])
 def delete_completed():
+    if 'user_id' not in session:
+        flash('Please login with Google to delete completed tasks', 'warning')
+        return redirect(url_for('login'))
+    
     try:
         Todo.query.filter_by(completed=True, user_id=session['user_id']).delete()
         db.session.commit()
