@@ -165,7 +165,12 @@ def home():
 @app.route('/delete/<int:id>', methods=['DELETE'])
 def delete(id):
     try:
-        todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
+        # Check for both user_id and session_id
+        if 'user_id' in session:
+            todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
+        else:
+            todo = Todo.query.filter_by(id=id, session_id=session.get('temp_user')).first_or_404()
+            
         db.session.delete(todo)
         db.session.commit()
         return jsonify({'success': True}), 200
@@ -175,7 +180,12 @@ def delete(id):
 
 @app.route('/update/<int:id>', methods=['POST'])
 def update(id):
-    todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
+    # Check for both user_id and session_id
+    if 'user_id' in session:
+        todo = Todo.query.filter_by(id=id, user_id=session['user_id']).first_or_404()
+    else:
+        todo = Todo.query.filter_by(id=id, session_id=session.get('temp_user')).first_or_404()
+        
     if 'completed' in request.json:
         todo.completed = request.json['completed']
         todo.date_completed = datetime.now(timezone.utc) if request.json['completed'] else None
